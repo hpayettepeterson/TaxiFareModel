@@ -5,7 +5,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 from TaxiFareModel.utils import compute_rmse
-
+from TaxiFareModel.data import get_data, clean_data
+from sklearn.model_selection import train_test_split
 
 
 class Trainer():
@@ -17,6 +18,7 @@ class Trainer():
         self.pipeline = None
         self.X = X
         self.y = y
+
 
     def set_pipeline(self):
         '''returns a pipelined model'''
@@ -32,16 +34,15 @@ class Trainer():
             ('distance', dist_pipe, ["pickup_latitude", "pickup_longitude", 'dropoff_latitude', 'dropoff_longitude']),
             ('time', time_pipe, ['pickup_datetime'])
         ], remainder="drop")
-        pipe = Pipeline([
+        self.pipeline = Pipeline([
             ('preproc', preproc_pipe),
             ('linear_model', LinearRegression())
         ])
-        return pipe
 
     def run(self):
         """set and train the pipeline"""
+        self.set_pipeline()
         self.pipeline.fit(self.X, self.y)
-        return self.pipeline
 
     def evaluate(self, X_test, y_test):
         """evaluates the pipeline on df_test and return the RMSE"""
@@ -53,9 +54,17 @@ class Trainer():
 
 if __name__ == "__main__":
     # get data
+    df = get_data()
     # clean data
+    df = clean_data(df)
     # set X and y
+    y = df["fare_amount"]
+    X = df.drop("fare_amount", axis=1)
     # hold out
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15)
     # train
+    trainer = Trainer(X_train, y_train)
+    trainer.run()
     # evaluate
-    print('TODO')
+    rmse = trainer.evaluate(X_test, y_test)
+    print(f'RMSE: {rmse}')
